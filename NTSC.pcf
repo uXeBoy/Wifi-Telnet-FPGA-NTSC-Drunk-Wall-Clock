@@ -1,0 +1,9 @@
+set_io clk       15
+
+set_io signal[2] 25 # vga_r
+set_io signal[1] 24 # vga_g
+set_io signal[0] 20 # vga_b
+
+set_io wclk      51
+set_io din       52
+set_io reset     53 # DC
