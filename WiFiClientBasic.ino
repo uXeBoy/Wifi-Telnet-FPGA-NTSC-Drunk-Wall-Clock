@@ -32,8 +32,8 @@ const int dataPin = 27;
 
 void setup()
 {
-    terminal.setNoDelay(true);
-    terminal.setTimeout(100);
+    // terminal.setNoDelay(true);
+    // terminal.setTimeout(100);
 
     pinMode(resetPin, OUTPUT);
     pinMode(clockPin, OUTPUT);
@@ -73,9 +73,9 @@ void setup()
 void loop()
 {
     byte current;
-    byte digits[8];
-    byte temp;
-    byte counterA;
+    byte digits[6];
+    byte counterA = 0;
+    byte counterB = 1;
     bool sent1 = false;
     bool sent2 = false;
 
@@ -85,8 +85,31 @@ void loop()
         {
             current = terminal.read();
 
-            if(current == IAC)
-                handleCommand();
+            if(current == 0x24)
+            {
+                terminal.write(date, 15);
+            }
+            else if(current == 0x09)
+            {
+                terminal.readBytes(digits, 6);
+
+                REG_WRITE(GPIO_OUT_W1TS_REG, ((1<<resetPin) | REG_READ(GPIO_OUT_W1TS_REG)));
+                REG_WRITE(GPIO_OUT_W1TS_REG, ((1<<clockPin) | REG_READ(GPIO_OUT_W1TS_REG)));
+                REG_WRITE(GPIO_OUT_W1TC_REG, ((3<<resetPin) | REG_READ(GPIO_OUT_W1TC_REG))); // reset + clock
+
+                for(byte b = 0; b < 3; b++)
+                {
+                    digits[counterA] -= 48; // convert from ASCII
+                    digits[counterB] -= 48;
+                    digits[counterB] |= (digits[counterA] << 4);
+                    shiftOutFast(digits[counterB]);
+                    counterA += 2;
+                    counterB += 2;
+                }
+
+                counterA = 0;
+                counterB = 1;
+            }
             else if(current == 0x3A && sent1 == false && sent2 == false)
             {
                 sent1 = true;
@@ -97,41 +120,10 @@ void loop()
                 sent2 = true;
                 terminal.write(pass, 9);
             }
-            else if(current == 0x24)
-            {
-                terminal.write(date, 15);
-
-                REG_WRITE(GPIO_OUT_W1TS_REG, ((1<<resetPin) | REG_READ(GPIO_OUT_W1TS_REG)));
-                REG_WRITE(GPIO_OUT_W1TS_REG, ((1<<clockPin) | REG_READ(GPIO_OUT_W1TS_REG)));
-                REG_WRITE(GPIO_OUT_W1TC_REG, ((3<<resetPin) | REG_READ(GPIO_OUT_W1TC_REG))); // reset + clock
-
-                counterA = 0;
-
-                terminal.readBytes(digits, 8);
-
-                while(counterA < 8)
-                {
-                    if(digits[counterA] == 0x09 && digits[counterA + 1] > 0x2F && digits[counterA + 1] < 0x33)
-                    {
-                        counterA++;
-                        temp = counterA + 1;
-
-                        for(byte b = 0; b < 3; b++)
-                        {
-                            digits[counterA] = digits[counterA] - 48; // convert from ASCII
-                            digits[temp] = digits[temp] - 48;
-                            digits[temp] |= (digits[counterA] << 4);
-                            shiftOutFast(digits[temp]);
-                            counterA = counterA + 2;
-                            temp = counterA + 1;
-                        }
-                        counterA = 7;
-                    }
-                    counterA++;
-                }
-            }
-            // else
-                // Serial.write(current); // stuff to be displayed
+            else if(current == IAC)
+                handleCommand();
+         // else
+             // Serial.write(current); // stuff to be displayed
         }
     }
 }
