@@ -93,22 +93,25 @@ void loop()
             {
                 terminal.readBytes(digits, 6);
 
-                REG_WRITE(GPIO_OUT_W1TS_REG, ((1<<resetPin) | REG_READ(GPIO_OUT_W1TS_REG)));
-                REG_WRITE(GPIO_OUT_W1TS_REG, ((1<<clockPin) | REG_READ(GPIO_OUT_W1TS_REG)));
-                REG_WRITE(GPIO_OUT_W1TC_REG, ((3<<resetPin) | REG_READ(GPIO_OUT_W1TC_REG))); // reset + clock
-
-                for(byte b = 0; b < 3; b++)
+                if(digits[0] > 0x2F && digits[0] < 0x33)
                 {
-                    digits[counterA] -= 48; // convert from ASCII
-                    digits[counterB] -= 48;
-                    digits[counterB] |= (digits[counterA] << 4);
-                    shiftOutFast(digits[counterB]);
-                    counterA += 2;
-                    counterB += 2;
-                }
+                    REG_WRITE(GPIO_OUT_W1TS_REG, ((1<<resetPin) | REG_READ(GPIO_OUT_W1TS_REG)));
+                    REG_WRITE(GPIO_OUT_W1TS_REG, ((1<<clockPin) | REG_READ(GPIO_OUT_W1TS_REG)));
+                    REG_WRITE(GPIO_OUT_W1TC_REG, ((3<<resetPin) | REG_READ(GPIO_OUT_W1TC_REG))); // reset + clock
 
-                counterA = 0;
-                counterB = 1;
+                    for(byte b = 0; b < 3; b++)
+                    {
+                        digits[counterA] -= 48; // convert from ASCII
+                        digits[counterB] -= 48;
+                        digits[counterB] |= (digits[counterA] << 4);
+                        shiftOutFast(digits[counterB]);
+                        counterA += 2;
+                        counterB += 2;
+                    }
+
+                    counterA = 0;
+                    counterB = 1;
+                }
             }
             else if(current == 0x3A && sent1 == false && sent2 == false)
             {
